@@ -5,7 +5,7 @@ package MorboDB::Cursor;
 use Any::Moose;
 use Carp;
 use Clone qw/clone/;
-use MQUL qw/doc_matches update_doc/;
+use MQUL qw/doc_matches/;
 use Tie::IxHash;
 
 our $VERSION = "0.001";
@@ -130,7 +130,7 @@ sub count {
 		$self->_query_db;
 	}
 
-	return scalar $self->_docs;
+	return scalar @{$self->_docs};
 }
 
 sub has_next {
@@ -153,6 +153,7 @@ sub next {
 	unless ($self->started_iterating) {
 		# haven't started iterating yet, let's query the database
 		$self->_query_db;
+		return unless $self->count;
 	}
 
 	my $doc = clone($self->_coll->_data->{$self->_docs->[$self->_index]});

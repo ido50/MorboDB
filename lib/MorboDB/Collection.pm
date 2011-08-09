@@ -7,6 +7,7 @@ use boolean;
 use Carp;
 use Clone qw/clone/;
 use MorboDB::Cursor;
+use MQUL qw/update_doc/;
 
 our $VERSION = "0.001";
 $VERSION = eval $VERSION;
@@ -101,10 +102,23 @@ sub update {
 
 	$opts ||= {};
 
-	my @docs = $opts->{multiple} ? $self->find($query)->all : ($self->find_one($query));
+	my @docs;
+	if ($opts->{multiple}) {
+		@docs = $self->find($query)->all;
+	} else {
+		my $doc = $self->find_one($query);
+		push(@docs, $doc) if $doc;
+	}
 
 	if (scalar @docs == 0 && $opts->{upsert}) {
-		my $id = $self->save(update_doc({}, $update));
+		# take attributes from the query where appropriate
+		my $doc = {};
+		foreach (keys %$query) {
+			next if $_ eq '_id';
+			$doc->{$_} = $query->{$_}
+				if !ref $query->{$_};
+		}
+		my $id = $self->save(update_doc($doc, $update));
 		return {
 			ok => 1,
 			n => 1,
@@ -171,7 +185,6 @@ sub drop {
 
 	$self->_clear_data;
 	delete $self->_database->_colls->{$self->name};
-	$self->DESTROY;
 	return;
 }
 
