@@ -69,6 +69,15 @@ like GridFS for example. Otherwise, the syntax is almost completely the
 same (by relying on L<MQUL>), apart for some changes detailed in both
 L<MQUL::Reference/"NOTABLE_DIFFERENCES_FROM_MONGODB"> and L</"INCOMPATIBILITIES WITH MONGODB">.
 
+I have provided most methods provided by relevant MongoDB modules, even where
+they're not really implemented (in which case they either return 1 or an
+undefined value). Read the documentation of MorboDB's different modules
+for information on every method and whether it's implemented or not. These
+methods are only provided to make it possible to use MorboDB as a drop-in
+replacement of MongoDB where appropriate (so you don't get "undefined subroutine"
+errors). Please let me know if there are methods you need (even unimplemented)
+that I haven't provided.
+
 =cut
 
 has '_dbs' => (is => 'ro', isa => 'HashRef[MorboDB::Database]', default => sub { {} });
@@ -117,6 +126,12 @@ sub AUTOLOAD {
 	return $self->get_database($db);
 }
 
+=head1 CAVEATS
+
+Currently (not sure if this will change), MorboDB does not work in shared
+memory, so if your application is multi-threaded, every thread will have
+its own MorboDB container completely separate and unaware of other threads.
+
 =head1 DIAGNOSTICS
 
 This module throws the following errors:
@@ -144,6 +159,8 @@ MorboDB depends on the following CPAN modules:
 
 =item * L<Clone>
 
+=item * L<Data::UUID>
+
 =item * L<MQUL>
 
 =item * L<Tie::IxHash>
@@ -163,6 +180,10 @@ No bugs have been reported.
 Please report any bugs or feature requests to
 C<bug-MorboDB@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=MorboDB>.
+
+=head1 SEE ALSO
+
+L<MongoDB>, L<MongoDB::Connection>, L<MQUL>, L<MQUL::Reference>.
 
 =head1 AUTHOR
 

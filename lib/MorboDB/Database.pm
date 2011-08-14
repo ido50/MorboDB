@@ -11,7 +11,7 @@ $VERSION = eval $VERSION;
 
 =head1 NAME
 
-MorboDB - A MorboDB database
+MorboDB::Database - A MorboDB database
 
 =head1 SYNOPSIS
 
@@ -157,6 +157,10 @@ No bugs have been reported.
 Please report any bugs or feature requests to
 C<bug-MorboDB@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=MorboDB>.
+
+=head1 SEE ALSO
+
+L<MongoDB::Database>.
 
 =head1 AUTHOR
 

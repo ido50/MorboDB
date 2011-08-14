@@ -286,4 +286,10 @@ sub _inc_index {
 	$self->_set_index($self->_index + 1);
 }
 
+=head1 SEE ALSO
+
+L<MongoDB::Cursor>.
+
+=cut
+
 __PACKAGE__->meta->make_immutable;

@@ -1,12 +1,13 @@
 package MorboDB::Collection;
 
-# ABSTRACT: [One line description of module's purpose here]
+# ABSTRACT: A MorboDB collection
 
 use Any::Moose;
 use boolean;
 use Carp;
 use Clone qw/clone/;
 use MorboDB::Cursor;
+use MorboDB::OID;
 use MQUL qw/update_doc/;
 
 our $VERSION = "0.001";
@@ -14,30 +15,35 @@ $VERSION = eval $VERSION;
 
 =head1 NAME
 
-MorboDB - [One line description of module's purpose here]
+MorboDB::Collection - A MorboDB collection
 
 =head1 SYNOPSIS
 
-	use MorboDB;
+	my $coll = $db->get_collection('users');
+	
+	my $id = $coll->insert({
+		username => 'someguy98',
+		password => 's3cr3t',
+		email => 'email at address dot com',
+	});
 
-=for author to fill in:
-    Brief code example(s) here showing commonest usage(s).
-    This section will be as far as many users bother reading
-    so make it as educational and exeplary as possible.
+	my $cursor = $coll->find({ email => qr/\@address\.com$/ })->sort({ username => 1 });
+	# use cursor according to MorboDB::Cursor
 
 =head1 DESCRIPTION
 
-=for author to fill in:
-    Write a full description of the module and its features here.
-    Use subsections (=head2, =head3) as appropriate.
+This module provides the API for handling collections in a L<MorboDB::Database>.
 
-=head1 INTERFACE 
+=head1 ATTRIBUTES
 
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
+=head2 name
+
+The name of the collection. String, required.
+
+=head2 full_name
+
+The full name of the collection, including the name of the database, joined
+by dots. String, created automatically.
 
 =cut
 
@@ -48,6 +54,15 @@ has 'full_name' => (is => 'ro', isa => 'Str', lazy_build => 1);
 has '_database' => (is => 'ro', isa => 'MorboDB::Database', required => 1, weak_ref => 1);
 
 has '_data' => (is => 'ro', isa => 'HashRef', default => sub { {} }, clearer => '_clear_data');
+
+=head1 STATIC FUNCTIONS
+
+=head2 to_index_string( $keys )
+
+Receives a hash-reference, array-reference or L<Tie::IxHash> object and
+converts into a query string.
+
+=cut
 
 sub to_index_string {
 	# this function is just stolen as-is from MongoDB::Collection
@@ -102,11 +117,11 @@ sub batch_insert {
 		confess "Data to insert must be a hash reference."
 			unless $doc && ref $doc eq 'HASH';
 
-		confess "You must provide an ID (for now)."
-			unless $doc->{_id};
+		$doc->{_id} = MorboDB::OID->new;
+		my $oid = ref $doc->{_id} && ref $doc->{_id} eq 'MorboDB::OID' ? $doc->{_id}->value : $doc->{_id};
 
-		confess "Duplicate key error, ID $doc->{_id} already exists in the collection."
-			if exists $self->_data->{$doc->{_id}};
+		confess "Duplicate key error, ID $oid already exists in the collection."
+			if exists $self->_data->{$oid};
 	}
 
 	return map { $self->save($_) } @$docs;
@@ -197,7 +212,9 @@ sub save {
 	confess "Document to save must be a hash reference."
 		unless $doc && ref $doc eq 'HASH';
 
-	$self->_data->{$doc->{_id}} = clone($doc);
+	my $oid = ref $doc->{_id} && ref $doc->{_id} eq 'MorboDB::OID' ? $doc->{_id}->value : $doc->{_id};
+
+	$self->_data->{$oid} = clone($doc);
 
 	return $doc->{_id};
 }
@@ -306,6 +323,10 @@ No bugs have been reported.
 Please report any bugs or feature requests to
 C<bug-MorboDB@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=MorboDB>.
+
+=head1 SEE ALSO
+
+L<MongoDB::Collection>.
 
 =head1 AUTHOR
 
