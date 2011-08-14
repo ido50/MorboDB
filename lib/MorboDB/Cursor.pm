@@ -1,6 +1,6 @@
 package MorboDB::Cursor;
 
-# ABSTRACT: [One line description of module's purpose here]
+# ABSTRACT: A cursor/iterator for MorboDB query results
 
 use Any::Moose;
 use Carp;
@@ -10,6 +10,51 @@ use Tie::IxHash;
 
 our $VERSION = "0.001";
 $VERSION = eval $VERSION;
+
+=head1 NAME
+
+MorboDB::Cursor - A cursor/iterator for MorboDB query results
+
+=head1 SYNOPSIS
+
+	my $cursor = $coll->find({ year => { '$gte' => 2000 } })->sort({ year => -1 });
+	while (my $object = $cursor->next) {
+		...
+	}
+
+	my @objects = $cursor->all;
+
+=head1 DESCRIPTION
+
+This module provides an iterator/cursor for query operations performed
+on a L<MorboDB::Collection> using the C<find()>/C<query()> methods.
+
+=head1 ATTRIBUTES
+
+=head2 started_iterating
+
+A boolean value indicating whether the cursor has started looking for
+documents in the database. Initially false. When true, setting modifiers
+such as C<sort>, C<fields>, C<skip> and C<limit> is not possible without
+first calling C<reset()>.
+
+=head2 immortal
+
+Boolean value, means nothing in MorboDB.
+
+=head2 tailable
+
+Boolean value, not implemented in MorboDB.
+
+=head2 partial
+
+Boolean value, not implemented in MorboDB.
+
+=head2 slave_okay
+
+Boolean value, not implemented in MorboDB.
+
+=cut
 
 has 'started_iterating' => (is => 'ro', isa => 'Bool', default => 0, writer => '_set_started_iterating');
 
@@ -37,6 +82,15 @@ has '_docs' => (is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_docs', clear
 
 has '_index' => (is => 'ro', isa => 'Int', default => 0, writer => '_set_index');
 
+=head1 OBJECT METHODS
+
+=head2 fields( \%fields )
+
+Selects which fields are returned. The default is all fields. _id is always returned.
+Returns this cursor for chaining operations.
+
+=cut
+
 sub fields {
 	my ($self, $f) = @_;
 
@@ -51,6 +105,12 @@ sub fields {
 	return $self;
 }
 
+=head2 limit( $num )
+
+Returns a maximum of C<$num> results. Returns this cursor for chaining operations.
+
+=cut
+
 sub limit {
 	my ($self, $num) = @_;
 
@@ -62,6 +122,12 @@ sub limit {
 	return $self;
 }
 
+=head2 skip( $num )
+
+Skips the first C<$num> results. Returns this cursor for chaining operations.
+
+=cut
+
 sub skip {
 	my ($self, $num) = @_;
 
@@ -72,6 +138,13 @@ sub skip {
 
 	return $self;
 }
+
+=head2 sort( $order )
+
+Adds a sort to the query. Argument is either a hash reference or a
+L<Tie::IxHash> object. Returns this cursor for chaining operations.
+
+=cut
 
 sub sort {
 	my ($self, $order) = @_;
@@ -97,15 +170,35 @@ sub sort {
 	return $self;
 }
 
+=head2 snapshot()
+
+Not implemented. Simply returns true here.
+
+=cut
+
 sub snapshot {
 	# NOT IMPLEMENTED YET (IF EVEN SHOULD BE)
 	1;
 }
 
+=head2 explain()
+
+Not implemented. Simply returns true here.
+
+=cut
+
 sub explain {
 	# NOT IMPLEMENTED YET
 	1;
 }
+
+=head2 reset()
+
+Resets the cursor. After being reset, pre-query methods can be called
+on the cursor (C<sort>, C<limit>, etc.) and subsequent calls to C<next()>,
+C<has_next()>, or C<all()> will re-query the database.
+
+=cut
 
 sub reset {
 	my $self = shift;
@@ -121,10 +214,22 @@ sub reset {
 	return 1;
 }
 
+=head2 info()
+
+Not implemented. Returns an empty hash-ref here.
+
+=cut
+
 sub info {
 	# NOT IMPLEMENTED YET
 	{};
 }
+
+=head2 query()
+
+Returns the number of documents the query matched.
+
+=cut
 
 sub count {
 	my $self = shift;
@@ -137,6 +242,12 @@ sub count {
 	return scalar @{$self->_docs};
 }
 
+=head2 has_next()
+
+Checks if there is another result to fetch.
+
+=cut
+
 sub has_next {
 	my $self = shift;
 
@@ -147,6 +258,12 @@ sub has_next {
 
 	return $self->_index < $self->count;
 }
+
+=head2 next()
+
+Returns the next object in the cursor. Returns C<undef> if no more data is available.
+
+=cut
 
 sub next {
 	my $self = shift;
@@ -167,13 +284,19 @@ sub next {
 		my $ret = {};
 		foreach (keys %{$self->_fields}) {
 			$ret->{$_} = $doc->{$_}
-				if exists $self->_fields->{$_};
+				if exists $self->_fields->{$_} || $_ eq '_id';
 		}
 		return $ret;
 	} else {
 		return $doc;
 	}
 }
+
+=head2 all()
+
+Returns an array of all objects in the result.
+
+=cut
 
 sub all {
 	my $self = shift;
@@ -286,10 +409,80 @@ sub _inc_index {
 	$self->_set_index($self->_index + 1);
 }
 
+=head1 DIAGNOSTICS
+
+=for author to fill in:
+    List every single error and warning message that the module can
+    generate (even the ones that will "never happen"), with a full
+    explanation of each problem, one or more likely causes, and any
+    suggested remedies.
+
+=over
+
+=item C<< Error message here, perhaps with %s placeholders >>
+
+[Description of error here]
+
+=item C<< Another error message here >>
+
+[Description of error here]
+
+[Et cetera, et cetera]
+
+=back
+
+=head1 BUGS AND LIMITATIONS
+
+No bugs have been reported.
+
+Please report any bugs or feature requests to
+C<bug-MorboDB@rt.cpan.org>, or through the web interface at
+L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=MorboDB>.
+
 =head1 SEE ALSO
 
 L<MongoDB::Cursor>.
 
+=head1 AUTHOR
+
+Ido Perlmuter <ido@ido50.net>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2011, Ido Perlmuter C<< ido@ido50.net >>.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself, either version
+5.8.1 or any later version. See L<perlartistic|perlartistic> 
+and L<perlgpl|perlgpl>.
+
+The full text of the license can be found in the
+LICENSE file included with this module.
+
+=head1 DISCLAIMER OF WARRANTY
+
+BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
+OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
+ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
+YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
+NECESSARY SERVICING, REPAIR, OR CORRECTION.
+
+IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
+REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE
+LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,
+OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE
+THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
+RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
+FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
+SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGES.
+
 =cut
 
 __PACKAGE__->meta->make_immutable;
+__END__

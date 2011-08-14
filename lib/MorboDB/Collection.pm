@@ -90,22 +90,78 @@ sub to_index_string {
 	return join('_', @name);
 }
 
+=head1 OBJECT METHODS
+
+=head2 find( [ $query ] )
+
+Executes the given query and returns a L<MorboDB::Cursor> object with the
+results (if query is not provided, all documents in the collection will
+match). C<$query> can be a hash reference, a L<Tie::IxHash> object, or
+array reference (with an even number of elements).
+
+The set of fields returned can be limited through the use of the
+C<MorboDB::Cursor->fields()> method on the resulting cursor object.
+Other commonly used cursor methods are C<limit()>, C<skip()>, and C<sort()>.
+
+As opposed to C<MongoDB::Collection->find()>, this method doesn't take a hash-ref
+of options such as C<fields> and C<sort>, use the appropriate methods on
+the cursor instead (this is also deprecated in MongoDB anyway).
+
+For a complete reference on querying in MorboDB, please look at L<MQUL::Reference/"QUERY STRUCTURES">.
+
+=cut
+
 sub find {
 	my ($self, $query) = @_;
 
-	confess "Query must be a hash reference."
-		if $query && ref $query ne 'HASH';
+	confess "query must be a hash reference, even-numbered array reference or Tie::IxHash object."
+		if $query &&	ref $query ne 'HASH' &&
+				ref $query ne 'Tie::IxHash' &&
+				(ref $query ne 'ARRAY' ||
+					(ref $query eq 'ARRAY' && scalar @$query % 2 != 0)
+				);
 
 	$query ||= {};
 
 	return MorboDB::Cursor->new(_coll => $self, _query => $query);
 }
 
+=head2 query( [ $query ] )
+
+Alias for C<find()>.
+
+=cut
+
 sub query { shift->find(@_) }
+
+=head2 find_one( [ $query ] )
+
+Executes the provided query and returns the first result found (if any,
+otherwise C<undef> is returned).
+
+Internally, this is really a shortcut for running C<< find()->limit(1)->next >>.
+
+=cut
 
 sub find_one { shift->find(@_)->limit(1)->next }
 
+=head2 insert( $doc )
+
+Inserts the given document into the database and returns it's ID.
+The document can be a hash reference, an even-numbered array reference
+or a Tie::IxHash object. The ID is the _id value specified in the data
+or a L<MorboDB::OID> object created automatically.
+
+=cut
+
 sub insert { ($_[0]->batch_insert([$_[1]]))[0] }
+
+=head2 batch_insert( \@docs )
+
+nserts each of the documents in the array into the database and returns
+an array of their _id attributes.
+
+=cut
 
 sub batch_insert {
 	my ($self, $docs) = @_;
@@ -127,6 +183,31 @@ sub batch_insert {
 
 	return map { $self->save($_) } @$docs;
 }
+
+=head2 update( $query, \%update, [ \%opts ] )
+
+Updates document(s) that match the provided query (which is the same as
+what C<find()> accepts) according to the update (C<\%update>) hash-ref.
+
+Return a hash-ref of information about the update, including number of documents
+updated (n).
+
+C<update()> can take a hash reference of options. The options currently supported are:
+
+=over
+
+=item * C<upsert> - If no object matches the query, C<\%update> will be inserted
+as a new document (possibly taking values from C<$query> too).
+
+=item * C<multiple> - All of the documents that match the query will be updated,
+not just the first document found.
+
+=back
+
+For a complete reference on update syntax and behavior, please look at
+L<MQUL::Reference/"UPDATE STRUCTURES">.
+
+=cut
 
 sub update {
 	my ($self, $query, $update, $opts) = @_;
@@ -182,6 +263,24 @@ sub update {
 	}
 }
 
+=head2 remove( [ $query, \%opts ] )
+
+Removes all objects matching the given query from the database. If a query
+is not given, removes all objects from the collection.
+
+Returns a hash-ref of information about the remove, including how many
+documents were removed (n).
+
+C<remove()> can take a hash reference of options. The options currently supported are:
+
+=over
+
+=item * C<just_one> - Only one matching document to be removed instead of all.
+
+=back
+
+=cut
+
 sub remove {
 	my ($self, $query, $opts) = @_;
 
@@ -208,7 +307,20 @@ sub remove {
 	};
 }
 
+=head2 ensure_index()
+
+Not implemented. Simply returns true here.
+
+=cut
+
 sub ensure_index { 1 } # not implemented
+
+=head2 save( \%doc )
+
+Inserts a document into the database if it does not have an C<_id> field,
+upserts it if it does have an C<_id> field. Mostly used internally.
+
+=cut
 
 sub save {
 	my ($self, $doc) = @_;
@@ -224,19 +336,55 @@ sub save {
 	return $doc->{_id};
 }
 
+=head2 count( [ $query ] )
+
+Shortcut for running C<< find($query)->count() >>.
+
+=cut
+
 sub count {
 	my ($self, $query) = @_;
 
 	$self->find($query)->count;
 }
 
+=head2 validate()
+
+Not implemented. Returns an empty hash-ref here.
+
+=cut
+
 sub validate { {} } # not implemented
+
+=head2 drop_indexes()
+
+Not implemented. Returns true here.
+
+=cut
 
 sub drop_indexes { 1 } # not implemented
 
+=head2 drop_index()
+
+Not implemented. Returns true here.
+
+=cut
+
 sub drop_index { 1 } # not implemented
 
+=head2 get_indexes()
+
+Not implemented. Returns false here.
+
+=cut
+
 sub get_indexes { return } # not implemented
+
+=head2 drop()
+
+Deletes the collection and all documents in it.
+
+=cut
 
 sub drop {
 	my $self = shift;
@@ -280,48 +428,7 @@ sub _build_full_name { $_[0]->_database->name.'.'.$_[0]->name }
 
 =back
 
-=head1 CONFIGURATION AND ENVIRONMENT
-
-=for author to fill in:
-    A full explanation of any configuration system(s) used by the
-    module, including the names and locations of any configuration
-    files, and the meaning of any environment variables or properties
-    that can be set. These descriptions must also include details of any
-    configuration language used.
-  
-MorboDB requires no configuration files or environment variables.
-
-=head1 DEPENDENCIES
-
-=for author to fill in:
-    A list of all the other modules that this module relies upon,
-    including any restrictions on versions, and an indication whether
-    the module is part of the standard Perl distribution, part of the
-    module's distribution, or must be installed separately. ]
-
-None.
-
-=head1 INCOMPATIBILITIES
-
-=for author to fill in:
-    A list of any modules that this module cannot be used in conjunction
-    with. This may be due to name conflicts in the interface, or
-    competition for system or program resources, or due to internal
-    limitations of Perl (for example, many modules that use source code
-    filters are mutually incompatible).
-
-None reported.
-
 =head1 BUGS AND LIMITATIONS
-
-=for author to fill in:
-    A list of known problems with the module, together with some
-    indication Whether they are likely to be fixed in an upcoming
-    release. Also a list of restrictions on the features the module
-    does provide: data types that cannot be handled, performance issues
-    and the circumstances in which they may arise, practical
-    limitations on the size of data sets, special cases that are not
-    (yet) handled, etc.
 
 No bugs have been reported.
 
