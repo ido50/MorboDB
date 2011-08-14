@@ -449,6 +449,8 @@ sub _build_full_name { $_[0]->_database->name.'.'.$_[0]->name }
 
 This module throws the following exceptions:
 
+=over
+
 =item C<< expected Tie::IxHash, hash, or array reference for keys >>
 
 This error is returned by the static C<to_index_string()> function if you're

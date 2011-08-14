@@ -410,6 +410,8 @@ sub _inc_index {
 
 This module throws the following exceptions:
 
+=over
+
 =item C<< cannot set fields/skip/limit/sort after querying >>
 
 This error will be thrown when you're trying to modify the cursor after
