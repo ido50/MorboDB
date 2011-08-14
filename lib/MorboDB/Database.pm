@@ -1,6 +1,6 @@
 package MorboDB::Database;
 
-# ABSTRACT: [One line description of module's purpose here]
+# ABSTRACT: A MorboDB database
 
 use Any::Moose;
 use Carp;
@@ -11,15 +11,27 @@ $VERSION = eval $VERSION;
 
 =head1 NAME
 
-MorboDB - [One line description of module's purpose here]
+MorboDB - A MorboDB database
 
 =head1 SYNOPSIS
 
 	use MorboDB;
 
+	my $morbodb = MorboDB->new;
+
+	my $db = $morbodb->get_database('my_database');
+	my $coll = $db->get_collection('articles');
+	# use $coll as described in MorboDB::Collection
+
 =head1 DESCRIPTION
 
-=head1 INTERFACE
+This module is the API for handling databases in a L<MorboDB> container.
+
+=head1 ATTRIBUTES
+
+=head2 name
+
+The name of the database. String, required.
 
 =cut
 
@@ -28,6 +40,36 @@ has 'name' => (is => 'ro', isa => 'Str', required => 1);
 has '_top' => (is => 'ro', isa => 'MorboDB', required => 1, weak_ref => 1);
 
 has '_colls' => (is => 'ro', isa => 'HashRef[MorboDB::Collection]', default => sub { {} });
+
+=head1 OBJECT METHODS
+
+=head2 collection_names()
+
+Returns a list with the names of all collections in the database.
+
+=cut
+
+sub collection_names { sort keys %{$_[0]->_colls} }
+
+=head2 get_collection( $name )
+
+Returns a L<MorboDB::Collection> object with the given name. There are
+two ways to call this method:
+
+	my $db = $morbodb->get_database('users');
+	my $coll = $db->get_collection('users');
+	# or
+	my $coll = $db->users; # just like MongoDB
+
+Like MongoDB, you can create a child-collection (purely semantics really)
+by using dots, so 'users.admins' can be thought of as a child collection
+of users. There are two ways to get 'users.admins':
+
+	my $admins = $db->get_collection('users.admins');
+	# or
+	my $admins = $db->users->admins; # just like MongoDB
+
+=cut
 
 sub get_collection {
 	my ($self, $name) = @_;
@@ -38,7 +80,19 @@ sub get_collection {
 	return $self->_colls->{$name} ||= MorboDB::Collection->new(name => $name, _database => $self);
 }
 
-sub collection_names { sort keys %{$_[0]->_colls} }
+=head2 get_gridfs()
+
+Not implemented. Doesn't do anything here except returning false.
+
+=cut
+
+sub get_gridfs { return } # not implemented
+
+=head2 drop()
+
+Drops the database, removes any collections it had and data they had.
+
+=cut
 
 sub drop {
 	my $self = shift;
@@ -48,11 +102,32 @@ sub drop {
 	}
 
 	delete $self->_top->_dbs->{$self->name};
-	$self->DESTROY;
 	return;
 }
 
-sub last_error { return }
+=head2 last_error()
+
+Not implemented. Doesn't do anything here except returning false.
+
+=cut
+
+sub last_error { return } # not implemented
+
+=head2 run_command()
+
+Not implemented. Doesn't do anything here except returning false.
+
+=cut
+
+sub run_command { return } # not implemented
+
+=head2 eval()
+
+Not implemented. Doesn't do anything here except returning false.
+
+=cut
+
+sub eval { return } # not implemented
 
 sub AUTOLOAD {
 	my $self = shift;
@@ -68,60 +143,14 @@ sub AUTOLOAD {
 
 =over
 
-=item C<< Error message here, perhaps with %s placeholders >>
+=item C<< You must provide the name of the collection to get. >>
 
-[Description of error here]
-
-=item C<< Another error message here >>
-
-[Description of error here]
-
-[Et cetera, et cetera]
+This error is returned by the C<get_collection()> method when you do not
+provide it with the name of the database you want to get/create.
 
 =back
 
-=head1 CONFIGURATION AND ENVIRONMENT
-
-=for author to fill in:
-    A full explanation of any configuration system(s) used by the
-    module, including the names and locations of any configuration
-    files, and the meaning of any environment variables or properties
-    that can be set. These descriptions must also include details of any
-    configuration language used.
-  
-MorboDB requires no configuration files or environment variables.
-
-=head1 DEPENDENCIES
-
-=for author to fill in:
-    A list of all the other modules that this module relies upon,
-    including any restrictions on versions, and an indication whether
-    the module is part of the standard Perl distribution, part of the
-    module's distribution, or must be installed separately. ]
-
-None.
-
-=head1 INCOMPATIBILITIES
-
-=for author to fill in:
-    A list of any modules that this module cannot be used in conjunction
-    with. This may be due to name conflicts in the interface, or
-    competition for system or program resources, or due to internal
-    limitations of Perl (for example, many modules that use source code
-    filters are mutually incompatible).
-
-None reported.
-
 =head1 BUGS AND LIMITATIONS
-
-=for author to fill in:
-    A list of known problems with the module, together with some
-    indication Whether they are likely to be fixed in an upcoming
-    release. Also a list of restrictions on the features the module
-    does provide: data types that cannot be handled, performance issues
-    and the circumstances in which they may arise, practical
-    limitations on the size of data sets, special cases that are not
-    (yet) handled, etc.
 
 No bugs have been reported.
 

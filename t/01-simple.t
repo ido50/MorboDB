@@ -4,8 +4,9 @@ use warnings;
 use strict;
 use utf8;
 use MorboDB;
-use Test::More;
+use Test::More tests => 29;
 use Try::Tiny;
+use Tie::IxHash;
 
 # create a new MorboDB object
 my $morbo = MorboDB->new;
@@ -22,37 +23,45 @@ ok($coll, 'Got a proper MorboDB::Collection object');
 # create some documents
 my $id1 = $coll->insert({
 	_id => 1,
-	title => 'Freaks and Geeks',
-	year => 1999,
+	title => 'Undeclared',
+	year => 2001,
 	seasons => 1,
 	genres => [qw/comedy drama/],
-	starring => ['Linda Cardellini', 'John Francis Daley', 'James Franco'],
+	starring => ['Jay Baruchel', 'Carla Gallo', 'Jason Segel'],
 });
-my ($id2, $id3) = $coll->batch_insert([
+my ($id2, $id3, $id4) = $coll->batch_insert([
 	{
 		_id => 2,
-		title => 'Undeclared',
-		year => 2001,
-		seasons => 1,
-		genres => [qw/comedy drama/],
-		starring => ['Jay Baruchel', 'Carla Gallo', 'Jason Segel'],
-	}, {
-		_id => 3,
 		title => 'How I Met Your Mother',
 		year => 2005,
 		seasons => 7,
 		genres => [qw/comedy romance/],
 		starring => ['Josh Radnor', 'Jason Segel', 'Cobie Smulders', 'Neil Patrick Harris', 'Alyson Hannigan'],
+	}, {
+		_id => 3,
+		title => 'Freaks and Geeks',
+		year => 1999,
+		seasons => 1,
+		genres => [qw/comedy drama/],
+		starring => ['Linda Cardellini', 'John Francis Daley', 'James Franco'],
+	}, {
+		_id => 4,
+		title => 'My Name Is Earl',
+		year => 2005,
+		seasons => 4,
+		genres => [qw/comedy/],
+		starring => ['Jason Lee', 'Ethan Suplee', 'Jaime Pressly'],
 	}
 ]);
 
 ok($id1 == 1, 'insert() returned the correct ID');
-ok($id2 == 2 && $id3 == 3, 'batch_insert() returned the correct IDs');
+ok($id2 == 2 && $id3 == 3 && $id4 == 4, 'batch_insert() returned the correct IDs');
 
 # find some documents
 my $curs1 = $coll->find({ _id => 1 });
 is($curs1->count, 1, 'count is 1 when searching for a known ID');
 my $doc1_from_cursor = $curs1->next;
+is($doc1_from_cursor->{title}, 'Undeclared', 'document has the correct title attribute');
 my $doc1_from_fone = $coll->find_one({ _id => 1 });
 is_deeply($doc1_from_fone, $doc1_from_cursor, 'find_one by ID finds the same thing as find');
 my $curs2 = $coll->find({ starring => 'Jason Segel' });
@@ -66,10 +75,35 @@ ok($up1->{ok} == 1 && $up1->{n} == 1, 'update seems to have succeeded');
 my $curs3 = $coll->find({ starring => 'Jason Segel' });
 is($curs3->count, 3, 'Jason Segel now stars in three shows');
 
+# let's find all documents in the collection
+my $curs4 = $coll->find;
+is($curs4->count, 4, 'find() with no arguments found all documents');
+
+# let's try to sort the cursor (this should fail)
+my $sort = Tie::IxHash->new(year => -1, title => 1);
+eval { $curs4->sort($sort) };
+ok($@ =~ m/cannot set sort after querying/, 'cannot set sort after querying');
+
+# let's reset the cursor and try again
+ok($curs4->started_iterating, 'cursor started iterating');
+$curs4->reset;
+ok(!$curs4->started_iterating, 'cursor has been reset');
+eval { $curs4->sort($sort) };
+ok(!$@, 'sort succeeded this time');
+
+# let's see if sort was made correctly, we'll also check the next method
+# on the way:
+my @docs;
+while ($curs4->has_next) {
+	push(@docs, $curs4->next);
+}
+
+is_deeply([map($_->{_id}, @docs)], [2, 4, 1, 3], 'results were sorted correctly');
+
 # let's try an upsert
 my $up2 = $coll->update({ title => 'Buffy the Vampire Slayer' }, {
 	'$set' => {
-		_id => 4,
+		_id => 5,
 		seasons => 7,
 		starring => ['Sarah Michelle Gellar', 'Alyson Hannigan'],
 	},
@@ -80,11 +114,11 @@ my $up2 = $coll->update({ title => 'Buffy the Vampire Slayer' }, {
 		genres => [qw/action drama fantasy/],
 	},
 }, { upsert => 1 });
-is($up2->{upserted}, 4, 'upsert seems to have succeeded');
+is($up2->{upserted}, 5, 'upsert seems to have succeeded');
 
 # let's find the upserted document
 my $doc3 = $coll->find_one({ year => { '$gt' => 1996, '$lte' => 1997 } });
-ok($doc3->{_id} == 4 && $doc3->{title} eq 'Buffy the Vampire Slayer', 'upserted document exists in the database');
+ok($doc3->{_id} == 5 && $doc3->{title} eq 'Buffy the Vampire Slayer', 'upserted document exists in the database');
 
 # let's see if autoload works okay
 my $coll2 = $db->autoloaded;
@@ -99,11 +133,11 @@ is($coll3->full_name, 'morbodb_test.autoloaded.subloaded', 'autoloaded child col
 # let's try to remove all Jason Segel starring shows
 my $rem1 = $coll->remove({ starring => 'Jason Segel' });
 is($rem1->{n}, 3, 'removed three documents as expected');
-my $curs4 = $coll->find({ starring => 'Jason Segel' });
-is($curs4->count, 0, 'No more Jason Segel shows');
+my $curs5 = $coll->find({ starring => 'Jason Segel' });
+is($curs5->count, 0, 'No more Jason Segel shows');
 
 # how many documents do we have left?
-is($coll->count, 1, 'we have one document left');
+is($coll->count, 2, 'we have two documents left');
 
 # let's remove that document too
 $coll->remove;
@@ -115,5 +149,7 @@ is($coll->count, 1, 'new document created');
 # and now drop the collection
 $coll->drop;
 is($coll->count, 0, 'dropped collection is empty (as it does not exist)');
+
+# let's drop the database
 
 done_testing();

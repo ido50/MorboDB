@@ -49,6 +49,32 @@ has '_database' => (is => 'ro', isa => 'MorboDB::Database', required => 1, weak_
 
 has '_data' => (is => 'ro', isa => 'HashRef', default => sub { {} }, clearer => '_clear_data');
 
+sub to_index_string {
+	# this function is just stolen as-is from MongoDB::Collection
+	my $keys = shift;
+
+	my @name;
+	if (ref $keys eq 'ARRAY' || ref $keys eq 'HASH') {
+		while ((my $idx, my $d) = each(%$keys)) {
+			push @name, $idx;
+			push @name, $d;
+		}
+	} elsif (ref $keys eq 'Tie::IxHash') {
+		my @ks = $keys->Keys;
+		my @vs = $keys->Values;
+		@vs = $keys->Values;
+
+		for (my $i=0; $i<$keys->Length; $i++) {
+			push @name, $ks[$i];
+			push @name, $vs[$i];
+		}
+	} else {
+		confess 'expected Tie::IxHash, hash, or array reference for keys';
+	}
+
+	return join('_', @name);
+}
+
 sub find {
 	my ($self, $query) = @_;
 
@@ -163,6 +189,8 @@ sub remove {
 	};
 }
 
+sub ensure_index { 1 } # not implemented
+
 sub save {
 	my ($self, $doc) = @_;
 
@@ -179,6 +207,14 @@ sub count {
 
 	$self->find($query)->count;
 }
+
+sub validate { {} } # not implemented
+
+sub drop_indexes { 1 } # not implemented
+
+sub drop_index { 1 } # not implemented
+
+sub get_indexes { return } # not implemented
 
 sub drop {
 	my $self = shift;

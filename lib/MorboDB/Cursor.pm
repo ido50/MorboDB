@@ -13,6 +13,14 @@ $VERSION = eval $VERSION;
 
 has 'started_iterating' => (is => 'ro', isa => 'Bool', default => 0, writer => '_set_started_iterating');
 
+has 'immortal' => (is => 'rw', isa => 'Bool', default => 0); # unimplemented
+
+has 'tailable' => (is => 'rw', isa => 'Bool', default => 0); # unimplemented
+
+has 'partial' => (is => 'rw', isa => 'Bool', default => 0); # unimplemented
+
+has 'slave_okay' => (is => 'rw', isa => 'Bool', default => 0); # unimplemented
+
 has '_coll' => (is => 'ro', isa => 'MorboDB::Collection', required => 1);
 
 has '_query' => (is => 'ro', isa => 'HashRef', required => 1);
@@ -32,11 +40,11 @@ has '_index' => (is => 'ro', isa => 'Int', default => 0, writer => '_set_index')
 sub fields {
 	my ($self, $f) = @_;
 
-	confess "cannot set fields after querying"
+	confess 'cannot set fields after querying'
 		if $self->started_iterating;
 
 	confess 'not a hash reference'
-		unless ref $f eq 'HASH';
+		unless ref $f && ref $f eq 'HASH';
 
 	$self->_set_fields($f);
 
@@ -46,7 +54,7 @@ sub fields {
 sub limit {
 	my ($self, $num) = @_;
 
-	confess "cannot set limit after querying"
+	confess 'cannot set limit after querying'
 		if $self->started_iterating;
 
 	$self->_set_limit($num);
@@ -57,7 +65,7 @@ sub limit {
 sub skip {
 	my ($self, $num) = @_;
 
-	confess "cannot set skip after querying"
+	confess 'cannot set skip after querying'
 		if $self->started_iterating;
 
 	$self->_set_skip($num);
@@ -68,26 +76,22 @@ sub skip {
 sub sort {
 	my ($self, $order) = @_;
 
-	confess "cannot set sort after querying"
+	confess 'cannot set sort after querying'
 		if $self->started_iterating;
 
 	confess 'not a hash reference'
-		unless ref $order eq 'HASH' || blessed $order eq 'Tie::IxHash';
+		unless ref $order && (ref $order eq 'HASH' || ref $order eq 'Tie::IxHash');
 
 	if (blessed $order eq 'Tie::IxHash') {
-		$self->_set_order($order);
-	} elsif (ref $order eq 'ARRAY' && scalar @$order % 2 == 0) {
-		$self->_set_order(Tie::IxHash->new($order));
-	} elsif (ref $order eq 'ARRAY') {
-		confess "sort() needs an even-numbered array reference.";
+		$self->_set_sort($order);
 	} elsif (ref $order eq 'HASH') {
 		my $obj = Tie::IxHash->new;
 		foreach (keys %$order) {
 			$obj->Push($_ => $order->{$_});
 		}
-		$self->_set_order($obj);
+		$self->_set_sort($obj);
 	} else {
-		confess "sort() needs a Tie::IxHash object, a hash reference, or an even-numbered array reference.";
+		confess 'sort() needs a Tie::IxHash object, a hash reference, or an even-numbered array reference.';
 	}
 
 	return $self;
@@ -187,7 +191,7 @@ sub _query_db {
 
 	my @docs;
 	my $skipped = 0;
-	foreach (keys %{$self->_coll->_data}) {
+	foreach (keys %{$self->_coll->_data || {}}) {
 		if (doc_matches($self->_coll->_data->{$_}, $self->_query)) {
 			# are we skipping this? we should only skip
 			# here if we're not sorting, otherwise we
@@ -272,6 +276,7 @@ sub _query_db {
 			if $self->_limit && scalar @docs > $self->_limit;
 	}
 
+	$self->_set_started_iterating(1);
 	$self->_set_docs(\@docs);
 }
 

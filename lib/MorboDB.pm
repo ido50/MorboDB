@@ -1,6 +1,6 @@
 package MorboDB;
 
-# ABSTRACT: [One line description of module's purpose here]
+# ABSTRACT: In-memory database, mostly-compatible clone of MongoDB
 
 use Any::Moose;
 use Carp;
@@ -11,34 +11,90 @@ $VERSION = eval $VERSION;
 
 =head1 NAME
 
-MorboDB - [One line description of module's purpose here]
+MorboDB - In-memory database, mostly-compatible clone of MongoDB
 
 =head1 SYNOPSIS
 
 	use MorboDB;
 
-=for author to fill in:
-    Brief code example(s) here showing commonest usage(s).
-    This section will be as far as many users bother reading
-    so make it as educational and exeplary as possible.
-
 =head1 DESCRIPTION
 
-=for author to fill in:
-    Write a full description of the module and its features here.
-    Use subsections (=head2, =head3) as appropriate.
+MorboDB is an in-memory database, meant to be a mostly-compatible clone
+of Perl's L<MongoDB> driver that can be used to replace or supplement
+it in applications where it might be useful.
 
-=head1 INTERFACE 
+=head2 USE CASES
 
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
+An in-memory database can be useful for many purposes. A common use case
+is testing purposes. You can already find a few in-memory databases on
+CPAN, such as L<MMapDB>, L<DB_File|DB_File/"In_Memory_Databases"> (has optional
+support for in-memory databases) and L<KiokuDB> (which has an in-memory
+hash serializer). I'm sure there are others more.
+
+I decided to develop MorboDB for two main purposes:
+
+=over
+
+=item * MongoDB disaster fallback - at work I am currently developing a
+very critical application that uses MongoDB (with replica-sets setup) as
+a database backend. This application cannot afford to suffer downtimes.
+The application's database has some constant data (not too much) that shouldn't change
+which is completely required for it to work. Most of the data, dynamically
+written due to user's work, is not as important so it wouldn't matter if
+the database won't be able to take such writes for some time. Therefore,
+I have decided to build a fail-safe: when the application is launched (actually
+I haven't decided yet if on launch or not), the constant data is loaded into
+MorboDB, which silently waits in the background. If for some reason the
+MongoDB database crashes, the application switches to MorboDB and the application
+continues to work - the user's don't even notice something happend. Since
+MorboDB provides mostly the same syntax as MongoDB, this isn't very far-fetched
+codewise.
+
+=item * Delayed writes and undos - I am also working on a content management
+system in which I want to allow users to undo changes for a certain duration
+(say 30 seconds) after the changes have been made. MorboDB can work as
+a bridge between the application and the actual MongoDB database (or whatever
+actually). Data only lives in MorboDB for 30 seconds. If the user decides
+to undo, the data is removed and nothing happens. Otherwise, the data is
+moved to MongoDB after the 30 seconds are over.
+
+=back
+
+=head2 MOSTLY-COMPATIBLE?
+
+As I've mentioned, MorboDB is "mostly-compatible" with L<MongoDB>. First
+of all, a lot of things that are relevant for MongoDB are not relevant for
+in-memory database. Some things aren't supported and probably never will,
+like GridFS for example. Otherwise, the syntax is almost completely the
+same (by relying on L<MQUL>), apart for some changes detailed in both
+L<MQUL::Reference/"NOTABLE_DIFFERENCES_FROM_MONGODB"> and L</"INCOMPATIBILITIES WITH MONGODB">.
 
 =cut
 
 has '_dbs' => (is => 'ro', isa => 'HashRef[MorboDB::Database]', default => sub { {} });
+
+=head1 OBJECT METHODS
+
+=head2 database_names()
+
+Returns a list with the names of all existing databases.
+
+=cut
+
+sub database_names { sort keys %{$_[0]->_dbs} }
+
+=head2 get_database( $name )
+
+Returns a L<MorboDB::Database> object with the given name. There are two
+ways to call this method:
+
+	my $morbodb = MorboDB->new;
+	
+	my $db = $morbodb->get_database('mydb');
+	# or
+	my $db = $morbodb->mydb; # just like MongoDB
+
+=cut
 
 sub get_database {
 	my ($self, $name) = @_;
@@ -48,6 +104,8 @@ sub get_database {
 
 	return $self->_dbs->{$name} ||= MorboDB::Database->new(_top => $self, name => $name);
 }
+
+sub get_master { 1 } # not implemented
 
 sub AUTOLOAD {
 	my $self = shift;
@@ -61,34 +119,16 @@ sub AUTOLOAD {
 
 =head1 DIAGNOSTICS
 
-=for author to fill in:
-    List every single error and warning message that the module can
-    generate (even the ones that will "never happen"), with a full
-    explanation of each problem, one or more likely causes, and any
-    suggested remedies.
+This module throws the following errors:
 
-=over
+=item C<< "You must provide the name of the database to get." >>
 
-=item C<< Error message here, perhaps with %s placeholders >>
-
-[Description of error here]
-
-=item C<< Another error message here >>
-
-[Description of error here]
-
-[Et cetera, et cetera]
+Thrown by C<get_database()> if you don't provide it with the name of the
+database you want to get/create.
 
 =back
 
 =head1 CONFIGURATION AND ENVIRONMENT
-
-=for author to fill in:
-    A full explanation of any configuration system(s) used by the
-    module, including the names and locations of any configuration
-    files, and the meaning of any environment variables or properties
-    that can be set. These descriptions must also include details of any
-    configuration language used.
   
 MorboDB requires no configuration files or environment variables.
 
@@ -106,29 +146,17 @@ MorboDB depends on the following CPAN modules:
 
 =item * L<MQUL>
 
+=item * L<Tie::IxHash>
+
 =back
 
-=head1 INCOMPATIBILITIES
+=head1 INCOMPATIBILITIES WITH MONGODB
 
-=for author to fill in:
-    A list of any modules that this module cannot be used in conjunction
-    with. This may be due to name conflicts in the interface, or
-    competition for system or program resources, or due to internal
-    limitations of Perl (for example, many modules that use source code
-    filters are mutually incompatible).
+=head1 INCOMPATIBILITIES WITH OTHER MODULES
 
 None reported.
 
 =head1 BUGS AND LIMITATIONS
-
-=for author to fill in:
-    A list of known problems with the module, together with some
-    indication Whether they are likely to be fixed in an upcoming
-    release. Also a list of restrictions on the features the module
-    does provide: data types that cannot be handled, performance issues
-    and the circumstances in which they may arise, practical
-    limitations on the size of data sets, special cases that are not
-    (yet) handled, etc.
 
 No bugs have been reported.
 
