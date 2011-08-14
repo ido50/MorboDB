@@ -86,7 +86,7 @@ has '_index' => (is => 'ro', isa => 'Int', default => 0, writer => '_set_index')
 
 =head2 fields( \%fields )
 
-Selects which fields are returned. The default is all fields. _id is always returned.
+Selects which fields are returned. The default is all fields. C<_id> is always returned.
 Returns this cursor for chaining operations.
 
 =cut
@@ -141,7 +141,7 @@ sub skip {
 
 =head2 sort( $order )
 
-Adds a sort to the query. Argument is either a hash reference or a
+Adds a sort to the cursor. Argument is either a hash reference or a
 L<Tie::IxHash> object. Returns this cursor for chaining operations.
 
 =cut
@@ -152,19 +152,16 @@ sub sort {
 	confess 'cannot set sort after querying'
 		if $self->started_iterating;
 
-	confess 'not a hash reference'
-		unless ref $order && (ref $order eq 'HASH' || ref $order eq 'Tie::IxHash');
-
-	if (blessed $order eq 'Tie::IxHash') {
+	if ($order && blessed $order eq 'Tie::IxHash') {
 		$self->_set_sort($order);
-	} elsif (ref $order eq 'HASH') {
+	} elsif ($order && ref $order eq 'HASH') {
 		my $obj = Tie::IxHash->new;
 		foreach (keys %$order) {
 			$obj->Push($_ => $order->{$_});
 		}
 		$self->_set_sort($obj);
 	} else {
-		confess 'sort() needs a Tie::IxHash object, a hash reference, or an even-numbered array reference.';
+		confess 'sort() needs a Tie::IxHash object or a hash reference.';
 	}
 
 	return $self;
@@ -411,23 +408,29 @@ sub _inc_index {
 
 =head1 DIAGNOSTICS
 
-=for author to fill in:
-    List every single error and warning message that the module can
-    generate (even the ones that will "never happen"), with a full
-    explanation of each problem, one or more likely causes, and any
-    suggested remedies.
+This module throws the following exceptions:
 
-=over
+=item C<< cannot set fields/skip/limit/sort after querying >>
 
-=item C<< Error message here, perhaps with %s placeholders >>
+This error will be thrown when you're trying to modify the cursor after
+it has already started querying the database. You can tell if the cursor
+already started querying the database by taking a look at the C<started_iterating>
+attribute. If you want to modify the cursor after iteration has started,
+you can used the C<reset()> method, but the query will have to run again.
 
-[Description of error here]
+=item C<< not a hash reference >>
 
-=item C<< Another error message here >>
+This error is thrown by the C<fields()> method when you're not providing it
+with a hash-reference of fields like so:
 
-[Description of error here]
+	$cursor->fields({ name => 1, datetime => 1 });
 
-[Et cetera, et cetera]
+=item C<< sort() needs a Tie::IxHash object or a hash reference. >>
+
+This error is thrown by the C<sort()> method when you're not giving it
+a hash reference or L<Tie::IxHash> object to sort according to, like so:
+
+	$cursor->sort(Tie::IxHash->new(name => 1, datetime => -1));
 
 =back
 

@@ -71,8 +71,8 @@ sub to_index_string {
 	my @name;
 	if (ref $keys eq 'ARRAY' || ref $keys eq 'HASH') {
 		while ((my $idx, my $d) = each(%$keys)) {
-			push @name, $idx;
-			push @name, $d;
+			push(@name, $idx);
+			push(@name, $d);
 		}
 	} elsif (ref $keys eq 'Tie::IxHash') {
 		my @ks = $keys->Keys;
@@ -80,8 +80,8 @@ sub to_index_string {
 		@vs = $keys->Values;
 
 		for (my $i=0; $i<$keys->Length; $i++) {
-			push @name, $ks[$i];
-			push @name, $vs[$i];
+			push(@name, $ks[$i]);
+			push(@name, $vs[$i]);
 		}
 	} else {
 		confess 'expected Tie::IxHash, hash, or array reference for keys';
@@ -107,6 +107,10 @@ As opposed to C<MongoDB::Collection->find()>, this method doesn't take a hash-re
 of options such as C<fields> and C<sort>, use the appropriate methods on
 the cursor instead (this is also deprecated in MongoDB anyway).
 
+Note that currently, providing a Tie::IxHash object or array reference
+will have no special effect, as the query will be converted into a hash
+reference. This may or may not change in future version.
+
 For a complete reference on querying in MorboDB, please look at L<MQUL::Reference/"QUERY STRUCTURES">.
 
 =cut
@@ -120,6 +124,17 @@ sub find {
 				(ref $query ne 'ARRAY' ||
 					(ref $query eq 'ARRAY' && scalar @$query % 2 != 0)
 				);
+
+	# turn array queries into Tie::IxHash objects
+	if ($query && ref $query eq 'ARRAY') {
+		$query = Tie::IxHash->new(@$query);
+	}
+
+	# turn Tie::IxHash objects into hash-refs
+	if ($query && ref $query eq 'Tie::IxHash') {
+		my %new_query = map { $_ => $query->FETCH($_) } $query->Keys;
+		$query = \%new_query;
+	}
 
 	$query ||= {};
 
@@ -152,6 +167,10 @@ The document can be a hash reference, an even-numbered array reference
 or a Tie::IxHash object. The ID is the _id value specified in the data
 or a L<MorboDB::OID> object created automatically.
 
+Note that providing a Tie::IxHash object or array reference will not make
+your document ordered, as documents are always saved as hash references,
+so this has not benefit except compatibility with MongoDB.
+
 =cut
 
 sub insert { ($_[0]->batch_insert([$_[1]]))[0] }
@@ -170,14 +189,25 @@ sub batch_insert {
 		unless $docs && ref $docs eq 'ARRAY';
 
 	foreach my $doc (@$docs) {
-		confess "Data to insert must be a hash reference."
-			unless $doc && ref $doc eq 'HASH';
+		confess "data to insert must be a hash reference, even-numbered array reference or Tie::IxHash object."
+			unless $doc && (ref $doc eq 'HASH' || ref $doc eq 'Tie::IxHash' || (ref $doc eq 'ARRAY' && scalar @$doc % 2 == 0));
+
+		# turn array documents into Tie::IxHash objects
+		if ($doc && ref $doc eq 'ARRAY') {
+			$doc = Tie::IxHash->new(@$doc);
+		}
+
+		# turn Tie::IxHash objects into hash-refs
+		if ($doc && ref $doc eq 'Tie::IxHash') {
+			my %new_doc = map { $_ => $doc->FETCH($_) } $doc->Keys;
+			$doc = \%new_doc;
+		}
 
 		$doc->{_id} ||= MorboDB::OID->new;
 
 		my $oid = blessed $doc->{_id} && blessed $doc->{_id} eq 'MorboDB::OID' ?
 			$doc->{_id}->value : $doc->{_id};
-		confess "Duplicate key error, ID $oid already exists in the collection."
+		confess "duplicate key error, ID $oid already exists in the collection."
 			if exists $self->_data->{$oid};
 	}
 
@@ -212,15 +242,19 @@ L<MQUL::Reference/"UPDATE STRUCTURES">.
 sub update {
 	my ($self, $query, $update, $opts) = @_;
 
-	confess "The query structure must be a hash reference."
-		if $query && ref $query ne 'HASH';
+	confess "query must be a hash reference, even-numbered array reference or Tie::IxHash object."
+		if $query &&	ref $query ne 'HASH' &&
+				ref $query ne 'Tie::IxHash' &&
+				(ref $query ne 'ARRAY' ||
+					(ref $query eq 'ARRAY' && scalar @$query % 2 != 0)
+				);
 
 	$query ||= {};
 
-	confess "The update structure must be a hash reference."
+	confess "the update structure must be a hash reference."
 		unless $update && ref $update eq 'HASH';
 
-	confess "The options structure must be a hash reference."
+	confess "the options structure must be a hash reference."
 		if $opts && ref $opts ne 'HASH';
 
 	$opts ||= {};
@@ -284,10 +318,14 @@ C<remove()> can take a hash reference of options. The options currently supporte
 sub remove {
 	my ($self, $query, $opts) = @_;
 
-	confess "The query structure must be a hash reference."
-		if $query && ref $query ne 'HASH';
+	confess "query must be a hash reference, even-numbered array reference or Tie::IxHash object."
+		if $query &&	ref $query ne 'HASH' &&
+				ref $query ne 'Tie::IxHash' &&
+				(ref $query ne 'ARRAY' ||
+					(ref $query eq 'ARRAY' && scalar @$query % 2 != 0)
+				);
 
-	confess "The options structure must be a hash reference."
+	confess "the options structure must be a hash reference."
 		if $opts && ref $opts ne 'HASH';
 
 	$query ||= {};
@@ -318,14 +356,15 @@ sub ensure_index { 1 } # not implemented
 =head2 save( \%doc )
 
 Inserts a document into the database if it does not have an C<_id> field,
-upserts it if it does have an C<_id> field. Mostly used internally.
+upserts it if it does have an C<_id> field. Mostly used internally. Document
+must be a hash-reference.
 
 =cut
 
 sub save {
 	my ($self, $doc) = @_;
 
-	confess "Document to save must be a hash reference."
+	confess "document to save must be a hash reference."
 		unless $doc && ref $doc eq 'HASH';
 
 	my $oid = blessed $doc->{_id} && blessed $doc->{_id} eq 'MorboDB::OID' ?
@@ -408,23 +447,61 @@ sub _build_full_name { $_[0]->_database->name.'.'.$_[0]->name }
 
 =head1 DIAGNOSTICS
 
-=for author to fill in:
-    List every single error and warning message that the module can
-    generate (even the ones that will "never happen"), with a full
-    explanation of each problem, one or more likely causes, and any
-    suggested remedies.
+This module throws the following exceptions:
 
-=over
+=item C<< expected Tie::IxHash, hash, or array reference for keys >>
 
-=item C<< Error message here, perhaps with %s placeholders >>
+This error is returned by the static C<to_index_string()> function if you're
+not providing it with a hash reference, array reference (even-numbered)
+or Tie::IxHash object.
 
-[Description of error here]
+=item C<< query must be a hash reference, even-numbered array reference or Tie::IxHash object. >>
 
-=item C<< Another error message here >>
+This error is returned by the C<find()>, C<query()>, C<update()>, C<remove()>
+and C<count()> methods, that expect a query that is either a hash reference, even-numbered
+array reference or Tie::IxHash object. Just make sure you're providing
+a valid query variable.
 
-[Description of error here]
+=item C<< batch_insert() expects an array reference of documents. >>
 
-[Et cetera, et cetera]
+This error is thrown by C<batch_insert()> if you're not giving it an
+array reference of documents to insert into the database.
+
+=item C<< data to insert must be a hash reference, even-numbered array reference or Tie::IxHash object. >>
+
+This error is thrown by C<insert()> and C<batch_insert()> when you're providing
+them with a document which is not a hash reference, even-numbered array
+reference or Tie::IxHash object. Just make sure your document(s) is/are
+valid.
+
+=item C<< duplicate key error, ID %s already exists in the collection. >>
+
+This error is thrown by C<insert()> and C<batch_insert()>, when you're trying
+to insert a document with an C<_id> attribute that already exists in the
+collection. If you're trying to update a document you know already exists,
+use the C<update()> method instead. Otherwise you're just doing it wrong.
+
+=item C<< The update structure must be a hash reference. >>
+
+This error is thrown by the C<update()> method when you're not giving it
+a proper update hash-ref, as described by L<MQUL::Reference/"UPDATE STRUCTURES">.
+
+=item C<< the options structure must be a hash reference. >>
+
+This error is thrown by C<update()> when you're providing it with a third
+argument that should be an options hash-ref, or by the C<remove()> method
+when you're providing it with a second argument that should be an options
+hash-ref. Just make sure you're not sending non hash-refs to these methods.
+
+=item C<< document to save must be a hash reference. >>
+
+This error is thrown by the C<save()> method when it receives a document
+which is not a hash reference. If this happens when invoking C<insert()>
+or C<batch_insert()>, and non of the specific errors of these methods were
+thrown, please submit a bug report. Otherwise (if you've called C<save()>
+directly, please make sure you're providing a hash reference. As opposed
+to C<insert()> and C<batch_insert()>, C<save()> does not take a Tie::IxHash
+objects or even-numbered array references.
 
 =back
 
