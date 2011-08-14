@@ -71,7 +71,7 @@ Not implemented. Only returns C<undef> here.
 
 =cut
 
-sub get_time { undef ]
+sub get_time { undef }
 
 =head2 TO_JSON()
 

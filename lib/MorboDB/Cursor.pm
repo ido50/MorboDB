@@ -5,7 +5,7 @@ package MorboDB::Cursor;
 use Any::Moose;
 use Carp;
 use Clone qw/clone/;
-use MQUL qw/doc_matches/;
+use MQUL 0.003 qw/doc_matches/;
 use Tie::IxHash;
 
 our $VERSION = "0.001";

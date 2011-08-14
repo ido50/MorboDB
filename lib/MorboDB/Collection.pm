@@ -8,7 +8,7 @@ use Carp;
 use Clone qw/clone/;
 use MorboDB::Cursor;
 use MorboDB::OID;
-use MQUL qw/update_doc/;
+use MQUL 0.003 qw/update_doc/;
 
 our $VERSION = "0.001";
 $VERSION = eval $VERSION;
@@ -117,9 +117,10 @@ sub batch_insert {
 		confess "Data to insert must be a hash reference."
 			unless $doc && ref $doc eq 'HASH';
 
-		$doc->{_id} = MorboDB::OID->new;
-		my $oid = ref $doc->{_id} && ref $doc->{_id} eq 'MorboDB::OID' ? $doc->{_id}->value : $doc->{_id};
+		$doc->{_id} ||= MorboDB::OID->new;
 
+		my $oid = blessed $doc->{_id} && blessed $doc->{_id} eq 'MorboDB::OID' ?
+			$doc->{_id}->value : $doc->{_id};
 		confess "Duplicate key error, ID $oid already exists in the collection."
 			if exists $self->_data->{$oid};
 	}
@@ -159,6 +160,7 @@ sub update {
 			$doc->{$_} = $query->{$_}
 				if !ref $query->{$_};
 		}
+		$doc->{_id} ||= MorboDB::OID->new;
 		my $id = $self->save(update_doc($doc, $update));
 		return {
 			ok => 1,
@@ -194,7 +196,9 @@ sub remove {
 
 	my @docs = $opts->{just_one} ? ($self->find_one($query)) : $self->find($query)->all;
 	foreach (@docs) {
-		delete $self->_data->{$_->{_id}};
+		my $oid = blessed $_->{_id} && blessed $_->{_id} eq 'MorboDB::OID' ?
+			$_->{_id}->value : $_->{_id};
+		delete $self->_data->{$oid};
 	}
 
 	return {
@@ -212,7 +216,8 @@ sub save {
 	confess "Document to save must be a hash reference."
 		unless $doc && ref $doc eq 'HASH';
 
-	my $oid = ref $doc->{_id} && ref $doc->{_id} eq 'MorboDB::OID' ? $doc->{_id}->value : $doc->{_id};
+	my $oid = blessed $doc->{_id} && blessed $doc->{_id} eq 'MorboDB::OID' ?
+		$doc->{_id}->value : $doc->{_id};
 
 	$self->_data->{$oid} = clone($doc);
 
