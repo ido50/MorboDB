@@ -222,7 +222,7 @@ sub info {
 	{};
 }
 
-=head2 query()
+=head2 count()
 
 Returns the number of documents the query matched.
 

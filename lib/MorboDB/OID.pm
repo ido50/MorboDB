@@ -57,7 +57,7 @@ has 'value' => (is => 'ro', isa => 'Str', builder => '_build_value');
 
 =head1 OBJECT METHODS
 
-head2 to_string()
+=head2 to_string()
 
 This really just returns the 'value' attribute.
 

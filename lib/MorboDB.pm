@@ -78,6 +78,12 @@ replacement of MongoDB where appropriate (so you don't get "undefined subroutine
 errors). Please let me know if there are methods you need (even unimplemented)
 that I haven't provided.
 
+=head2 STATUS
+
+This module is beta software, not suitable for production use yet. Feel
+free to test it and let me know how it works for you (of course, not on
+production), I'd be happy to receive any bug reports, requests, ideas, etc.
+
 =cut
 
 has '_dbs' => (is => 'ro', isa => 'HashRef[MorboDB::Database]', default => sub { {} });
@@ -113,6 +119,12 @@ sub get_database {
 
 	return $self->_dbs->{$name} ||= MorboDB::Database->new(_top => $self, name => $name);
 }
+
+=head2 get_master()
+
+Not implemented, simply returns a true value here.
+
+=cut
 
 sub get_master { 1 } # not implemented
 

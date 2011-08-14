@@ -14,3 +14,4 @@
 ^pod2htm.*\.tmp$
 ^MorboDB-.*$
 ^\.build.*$
+^MYMETA\..*$
