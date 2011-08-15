@@ -6,7 +6,7 @@ use Any::Moose;
 use Carp;
 use MorboDB::Database;
 
-our $VERSION = "0.001";
+our $VERSION = "0.001001";
 $VERSION = eval $VERSION;
 
 =head1 NAME
@@ -17,44 +17,60 @@ MorboDB - In-memory database, mostly-compatible clone of MongoDB
 
 	use MorboDB;
 
+	# MorboDB usage is meant to refelect MongoDB usage
+
+	my $morbo = MorboDB->new;
+	my $database = $morbo->get_database('my_database');
+	my $collection = $database->get_collection('users');
+
+	my $id = $collection->insert({
+		username => 'someguy98',
+		password => 's3cr3t',
+		email => 'email at address dot com',
+	});
+
+	...
+
 =head1 DESCRIPTION
 
 MorboDB is an in-memory database, meant to be a mostly-compatible clone
-of Perl's L<MongoDB> driver that can be used to replace or supplement
-it in applications where it might be useful.
+of Perl's L<MongoDB> driver, in such a way that it can be used to replace
+or even supplement MongoDB in applications where it might be useful.
 
 =head2 USE CASES
 
 An in-memory database can be useful for many purposes. A common use case
-is testing purposes. You can already find a few in-memory databases on
-CPAN, such as L<MMapDB>, L<DB_File|DB_File/"In_Memory_Databases"> (has optional
-support for in-memory databases) and L<KiokuDB> (which has an in-memory
-hash serializer). I'm sure there are others more.
+is testing purposes, where using a "physical" database might be onerous.
+You can already find a few in-memory databases on CPAN, such as L<MMapDB>,
+L<DB_File|DB_File/"In_Memory_Databases"> (has optional support for in-memory
+databases) and L<KiokuDB> (which has an in-memory hash serializer).
+I'm sure there are others more.
 
 I decided to develop MorboDB for two main purposes:
 
 =over
 
-=item * MongoDB disaster fallback - at work I am currently developing a
+=item * B<MongoDB disaster fallback>: at work I am currently developing a
 very critical application that uses MongoDB (with replica-sets setup) as
 a database backend. This application cannot afford to suffer downtimes.
 The application's database has some constant data (not too much) that shouldn't change
-which is completely required for it to work. Most of the data, dynamically
-written due to user's work, is not as important so it wouldn't matter if
-the database won't be able to take such writes for some time. Therefore,
-I have decided to build a fail-safe: when the application is launched (actually
+which is completely required for it to work. Most of the data, however,
+is dynamically written due to user's work and is not as important, so it
+wouldn't matter if the database won't be able to take such writes for some time.
+
+Therefore, I have decided to build a fail-safe: when the application is launched (actually
 I haven't decided yet if on launch or not), the constant data is loaded into
 MorboDB, which silently waits in the background. If for some reason the
 MongoDB database crashes, the application switches to MorboDB and the application
-continues to work - the user's don't even notice something happend. Since
+continues to work - the users don't even notice something happend. Since
 MorboDB provides mostly the same syntax as MongoDB, this isn't very far-fetched
 codewise.
 
-=item * Delayed writes and undos - I am also working on a content management
+=item * B<Delayed writes and undos>: I am also working on a content management
 system in which I want to allow users to undo changes for a certain duration
 (say 30 seconds) after the changes have been made. MorboDB can work as
 a bridge between the application and the actual MongoDB database (or whatever
-actually). Data only lives in MorboDB for 30 seconds. If the user decides
+actually). So the data will only live in MorboDB for 30 seconds, and if the user decides
 to undo, the data is removed and nothing happens. Otherwise, the data is
 moved to MongoDB after the 30 seconds are over.
 
@@ -62,7 +78,7 @@ moved to MongoDB after the 30 seconds are over.
 
 =head2 MOSTLY-COMPATIBLE?
 
-As I've mentioned, MorboDB is "mostly-compatible" with L<MongoDB>. First
+As I've mentioned, MorboDB is I<mostly-compatible> with L<MongoDB>. First
 of all, a lot of things that are relevant for MongoDB are not relevant for
 in-memory database. Some things aren't supported and probably never will,
 like GridFS for example. Otherwise, the syntax is almost completely the
@@ -182,6 +198,54 @@ MorboDB depends on the following CPAN modules:
 =back
 
 =head1 INCOMPATIBILITIES WITH MONGODB
+
+While I hope to make MorboDB as much of a clone of the L<MongoDB> driver
+as possible (syntax and usage-wise), some changes are inevitable. Currently,
+only the most essential features of the MongoDB distribution are implemented.
+That means you can insert documents as you would with MongoDB, update
+documents and remove documents. You can find documents and work with cursor
+pretty much the same, including sorting and other cursor modifications.
+
+Syntaxwise, any differences between MorboDB and MongoDB stem from the usage
+of L<MQUL> as the parser, so read L<the MQUL documentation|MQUL::Reference/"NOTABLE_DIFFERENCES_FROM_MONGODB">
+for a list of differences.
+
+Another difference worth noting is with OIDs. In MongoDB, OIDs (the automatic
+ones at least) are 24 characters long hexadecimal strings, and are created
+by the L<MongoDB::OID> module. In MorboDB, however, OIDs (also, only the
+automatic ones) are 36 characters long UUIDs. This alone limits your ability
+to use MorboDB alongside MongoDB in an application if you perform queries
+on the C<_id> attribute with known MongoDB::OID objects. Other than that,
+this shouldn't really be a problem.
+
+Featurewise, most differences should be missing or unimplemented methods
+(and a few missing classes). I have taken some care not to miss any methods provided by the MongoDB
+distribution, but I may have missed some. Where methods are unimplemented,
+MorboDB will simply return a true or false value (as appropriate). Please
+read the documentation of each MorboDB module to learn what to expect from
+unimplemented methods (and implemented methods of course).
+
+Some features that are native to MongoDB itself (and not just the L<MongoDB>
+distribution on CPAN) will never be implemented in MorboDB (most of them
+don't even make sense in an in-memory database).
+
+Here's a (probably incomplete) list of MongoDB features missing from MongoDB:
+
+=over
+
+=item * Authentication
+
+=item * Indexing (may be supported in the future, don't think so though)
+
+=item * Replication
+
+=item * Sharding
+
+=item * Map/Reduce
+
+=item * GridFS
+
+=back
 
 =head1 INCOMPATIBILITIES WITH OTHER MODULES
 

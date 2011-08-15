@@ -10,7 +10,7 @@ use MorboDB::Cursor;
 use MorboDB::OID;
 use MQUL 0.003 qw/update_doc/;
 
-our $VERSION = "0.001";
+our $VERSION = "0.001001";
 $VERSION = eval $VERSION;
 
 =head1 NAME
@@ -100,14 +100,14 @@ match). C<$query> can be a hash reference, a L<Tie::IxHash> object, or
 array reference (with an even number of elements).
 
 The set of fields returned can be limited through the use of the
-C<MorboDB::Cursor->fields()> method on the resulting cursor object.
+C<< MorboDB::Cursor->fields() >> method on the resulting cursor object.
 Other commonly used cursor methods are C<limit()>, C<skip()>, and C<sort()>.
 
-As opposed to C<MongoDB::Collection->find()>, this method doesn't take a hash-ref
+As opposed to C<< MongoDB::Collection->find() >>, this method doesn't take a hash-ref
 of options such as C<fields> and C<sort>, use the appropriate methods on
 the cursor instead (this is also deprecated in MongoDB anyway).
 
-Note that currently, providing a Tie::IxHash object or array reference
+Note that currently, providing a C<Tie::IxHash> object or array reference
 will have no special effect, as the query will be converted into a hash
 reference. This may or may not change in future version.
 
@@ -154,7 +154,7 @@ sub query { shift->find(@_) }
 Executes the provided query and returns the first result found (if any,
 otherwise C<undef> is returned).
 
-Internally, this is really a shortcut for running C<< find()->limit(1)->next >>.
+Internally, this is really a shortcut for running C<< $coll->find($query)->limit(1)->next() >>.
 
 =cut
 
@@ -169,7 +169,7 @@ or a L<MorboDB::OID> object created automatically.
 
 Note that providing a Tie::IxHash object or array reference will not make
 your document ordered, as documents are always saved as hash references,
-so this has not benefit except compatibility with MongoDB.
+so this has no benefit except compatibility with MongoDB.
 
 =cut
 
@@ -177,7 +177,7 @@ sub insert { ($_[0]->batch_insert([$_[1]]))[0] }
 
 =head2 batch_insert( \@docs )
 
-nserts each of the documents in the array into the database and returns
+Inserts each of the documents in the array into the database and returns
 an array of their _id attributes.
 
 =cut
@@ -377,7 +377,7 @@ sub save {
 
 =head2 count( [ $query ] )
 
-Shortcut for running C<< find($query)->count() >>.
+Shortcut for running C<< $coll->find($query)->count() >>.
 
 =cut
 
@@ -483,7 +483,7 @@ to insert a document with an C<_id> attribute that already exists in the
 collection. If you're trying to update a document you know already exists,
 use the C<update()> method instead. Otherwise you're just doing it wrong.
 
-=item C<< The update structure must be a hash reference. >>
+=item C<< the update structure must be a hash reference. >>
 
 This error is thrown by the C<update()> method when you're not giving it
 a proper update hash-ref, as described by L<MQUL::Reference/"UPDATE STRUCTURES">.
