@@ -392,7 +392,7 @@ sub _query_db {
 		# let's limit (and possibly skip) the results if we need to
 		splice(@docs, 0, $self->_skip)
 			if $self->_skip;
-		splice(@docs, $self->_limit, length(@docs) - $self->_limit)
+		splice(@docs, $self->_limit, scalar(@docs) - $self->_limit)
 			if $self->_limit && scalar @docs > $self->_limit;
 	}
 
