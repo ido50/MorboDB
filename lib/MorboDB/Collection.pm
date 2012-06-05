@@ -10,7 +10,7 @@ use MorboDB::Cursor;
 use MorboDB::OID;
 use MQUL 0.003 qw/update_doc/;
 
-our $VERSION = "0.001001";
+our $VERSION = "0.001002";
 $VERSION = eval $VERSION;
 
 =head1 NAME

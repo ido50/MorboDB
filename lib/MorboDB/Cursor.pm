@@ -8,7 +8,7 @@ use Clone qw/clone/;
 use MQUL 0.003 qw/doc_matches/;
 use Tie::IxHash;
 
-our $VERSION = "0.001001";
+our $VERSION = "0.001002";
 $VERSION = eval $VERSION;
 
 =head1 NAME

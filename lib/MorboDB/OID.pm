@@ -6,7 +6,7 @@ use Any::Moose;
 use Carp;
 use Data::UUID;
 
-our $VERSION = "0.001001";
+our $VERSION = "0.001002";
 $VERSION = eval $VERSION;
 
 =head1 NAME

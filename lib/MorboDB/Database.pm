@@ -6,7 +6,7 @@ use Any::Moose;
 use Carp;
 use MorboDB::Collection;
 
-our $VERSION = "0.001001";
+our $VERSION = "0.001002";
 $VERSION = eval $VERSION;
 
 =head1 NAME

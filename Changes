@@ -1,6 +1,10 @@
 Revision history for MorboDB
 
 {{$NEXT}}
+	- Fix warning on perl-5.16 for accidentally using length() on an
+	  array [thanks Vladimir Timofeev]
+
+0.001001  2011-08-16 01:39:53 Asia/Jerusalem
 	- Many documentation fixes and some additions
 
 0.001     2011-08-15 00:58:04 Asia/Jerusalem
