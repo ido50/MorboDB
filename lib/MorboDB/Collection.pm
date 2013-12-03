@@ -367,6 +367,7 @@ sub save {
 	confess "document to save must be a hash reference."
 		unless $doc && ref $doc eq 'HASH';
 
+   $doc->{_id} ||= MorboDB::OID->new;
 	my $oid = blessed $doc->{_id} && blessed $doc->{_id} eq 'MorboDB::OID' ?
 		$doc->{_id}->value : $doc->{_id};
 
