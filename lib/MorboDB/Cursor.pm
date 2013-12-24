@@ -152,7 +152,7 @@ sub sort {
 	confess 'cannot set sort after querying'
 		if $self->started_iterating;
 
-	if ($order && blessed $order eq 'Tie::IxHash') {
+	if ($order && ref $order eq 'Tie::IxHash') {
 		$self->_set_sort($order);
 	} elsif ($order && ref $order eq 'HASH') {
 		my $obj = Tie::IxHash->new;
