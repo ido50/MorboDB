@@ -2,13 +2,13 @@ package MorboDB::Cursor;
 
 # ABSTRACT: A cursor/iterator for MorboDB query results
 
-use Any::Moose;
+use Moo;
 use Carp;
 use Clone qw/clone/;
 use MQUL 0.003 qw/doc_matches/;
 use Tie::IxHash;
 
-our $VERSION = "0.001002";
+our $VERSION = "1.000000";
 $VERSION = eval $VERSION;
 
 =head1 NAME
@@ -56,31 +56,31 @@ Boolean value, not implemented in MorboDB.
 
 =cut
 
-has 'started_iterating' => (is => 'ro', isa => 'Bool', default => 0, writer => '_set_started_iterating');
+has 'started_iterating' => (is => 'ro', default => 0, writer => '_set_started_iterating');
 
-has 'immortal' => (is => 'rw', isa => 'Bool', default => 0); # unimplemented
+has 'immortal' => (is => 'rw', default => 0); # unimplemented
 
-has 'tailable' => (is => 'rw', isa => 'Bool', default => 0); # unimplemented
+has 'tailable' => (is => 'rw', default => 0); # unimplemented
 
-has 'partial' => (is => 'rw', isa => 'Bool', default => 0); # unimplemented
+has 'partial' => (is => 'rw', default => 0); # unimplemented
 
-has 'slave_okay' => (is => 'rw', isa => 'Bool', default => 0); # unimplemented
+has 'slave_okay' => (is => 'rw', default => 0); # unimplemented
 
-has '_coll' => (is => 'ro', isa => 'MorboDB::Collection', required => 1);
+has '_coll' => (is => 'ro', required => 1);
 
-has '_query' => (is => 'ro', isa => 'HashRef', required => 1);
+has '_query' => (is => 'ro', required => 1);
 
-has '_fields' => (is => 'ro', isa => 'HashRef', writer => '_set_fields', clearer => '_clear_fields');
+has '_fields' => (is => 'ro', writer => '_set_fields', clearer => '_clear_fields');
 
-has '_limit' => (is => 'ro', isa => 'Int', default => 0, writer => '_set_limit', clearer => '_clear_limit');
+has '_limit' => (is => 'ro', default => 0, writer => '_set_limit', clearer => '_clear_limit');
 
-has '_skip' => (is => 'ro', isa => 'Int', default => 0, writer => '_set_skip', clearer => '_clear_skip');
+has '_skip' => (is => 'ro', default => 0, writer => '_set_skip', clearer => '_clear_skip');
 
-has '_sort' => (is => 'ro', isa => 'Tie::IxHash', predicate => '_has_sort', writer => '_set_sort', clearer => '_clear_sort');
+has '_sort' => (is => 'ro', predicate => '_has_sort', writer => '_set_sort', clearer => '_clear_sort');
 
-has '_docs' => (is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_docs', clearer => '_clear_docs');
+has '_docs' => (is => 'ro', writer => '_set_docs', clearer => '_clear_docs');
 
-has '_index' => (is => 'ro', isa => 'Int', default => 0, writer => '_set_index');
+has '_index' => (is => 'ro', default => 0, writer => '_set_index');
 
 =head1 OBJECT METHODS
 
@@ -454,7 +454,7 @@ Ido Perlmuter <ido@ido50.net>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2011, Ido Perlmuter C<< ido@ido50.net >>.
+Copyright (c) 2011-2013, Ido Perlmuter C<< ido@ido50.net >>.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself, either version

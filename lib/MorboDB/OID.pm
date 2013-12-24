@@ -2,11 +2,11 @@ package MorboDB::OID;
 
 # ABSTRACT: An object ID in MorboDB
 
-use Any::Moose;
+use Moo;
 use Carp;
 use Data::UUID;
 
-our $VERSION = "0.001002";
+our $VERSION = "1.000000";
 $VERSION = eval $VERSION;
 
 =head1 NAME
@@ -53,7 +53,7 @@ for more information on UUID format.
 
 =cut
 
-has 'value' => (is => 'ro', isa => 'Str', builder => '_build_value');
+has 'value' => (is => 'ro', builder => '_build_value');
 
 =head1 OBJECT METHODS
 
@@ -110,7 +110,7 @@ Ido Perlmuter <ido@ido50.net>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2011, Ido Perlmuter C<< ido@ido50.net >>.
+Copyright (c) 2011-2013, Ido Perlmuter C<< ido@ido50.net >>.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself, either version

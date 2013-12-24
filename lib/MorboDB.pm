@@ -2,11 +2,11 @@ package MorboDB;
 
 # ABSTRACT: In-memory database, mostly-compatible clone of MongoDB
 
-use Any::Moose;
+use Moo;
 use Carp;
 use MorboDB::Database;
 
-our $VERSION = "0.001002";
+our $VERSION = "1.000000";
 $VERSION = eval $VERSION;
 
 =head1 NAME
@@ -94,6 +94,9 @@ replacement of MongoDB where appropriate (so you don't get "undefined subroutine
 errors). Please let me know if there are methods you need (even unimplemented)
 that I haven't provided.
 
+Note that autoloading of database and collection objects has been deprecated
+since version 1.0.0, in accordance with MongoDB.
+
 =head2 STATUS
 
 This module is beta software, not suitable for production use yet. Feel
@@ -102,7 +105,7 @@ production), I'd be happy to receive any bug reports, requests, ideas, etc.
 
 =cut
 
-has '_dbs' => (is => 'ro', isa => 'HashRef[MorboDB::Database]', default => sub { {} });
+has '_dbs' => (is => 'ro', default => sub { {} });
 
 =head1 OBJECT METHODS
 
@@ -116,14 +119,11 @@ sub database_names { sort keys %{$_[0]->_dbs} }
 
 =head2 get_database( $name )
 
-Returns a L<MorboDB::Database> object with the given name. There are two
-ways to call this method:
+Returns a L<MorboDB::Database> object with the given name:
 
 	my $morbodb = MorboDB->new;
 	
 	my $db = $morbodb->get_database('mydb');
-	# or
-	my $db = $morbodb->mydb; # just like MongoDB
 
 =cut
 
@@ -143,16 +143,6 @@ Not implemented, simply returns a true value here.
 =cut
 
 sub get_master { 1 } # not implemented
-
-sub AUTOLOAD {
-	my $self = shift;
-
-	our $AUTOLOAD;
-	my $db = $AUTOLOAD;
-	$db =~ s/.*:://;
-
-	return $self->get_database($db);
-}
 
 =head1 CAVEATS
 
@@ -183,13 +173,13 @@ MorboDB depends on the following CPAN modules:
 
 =over
 
-=item * L<Any::Moose>
-
 =item * L<boolean>
 
 =item * L<Clone>
 
 =item * L<Data::UUID>
+
+=item * L<Moo>
 
 =item * L<MQUL>
 
@@ -269,7 +259,7 @@ Ido Perlmuter <ido@ido50.net>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2011, Ido Perlmuter C<< ido@ido50.net >>.
+Copyright (c) 2011-2013, Ido Perlmuter C<< ido@ido50.net >>.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself, either version

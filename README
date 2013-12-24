@@ -78,6 +78,9 @@ DESCRIPTION
     "undefined subroutine" errors). Please let me know if there are methods
     you need (even unimplemented) that I haven't provided.
 
+    Note that autoloading of database and collection objects has been
+    deprecated since version 1.0.0, in accordance with MongoDB.
+
   STATUS
     This module is beta software, not suitable for production use yet. Feel
     free to test it and let me know how it works for you (of course, not on
@@ -89,14 +92,11 @@ OBJECT METHODS
     Returns a list with the names of all existing databases.
 
   get_database( $name )
-    Returns a MorboDB::Database object with the given name. There are two
-    ways to call this method:
+    Returns a MorboDB::Database object with the given name:
 
             my $morbodb = MorboDB->new;
         
             my $db = $morbodb->get_database('mydb');
-            # or
-            my $db = $morbodb->mydb; # just like MongoDB
 
   get_master()
     Not implemented, simply returns a true value here.
@@ -120,13 +120,13 @@ CONFIGURATION AND ENVIRONMENT
 DEPENDENCIES
     MorboDB depends on the following CPAN modules:
 
-    *   Any::Moose
-
     *   boolean
 
     *   Clone
 
     *   Data::UUID
+
+    *   Moo
 
     *   MQUL
 
@@ -197,7 +197,7 @@ AUTHOR
     Ido Perlmuter <ido@ido50.net>
 
 LICENSE AND COPYRIGHT
-    Copyright (c) 2011, Ido Perlmuter "ido@ido50.net".
+    Copyright (c) 2011-2013, Ido Perlmuter "ido@ido50.net".
 
     This module is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself, either version 5.8.1 or any later

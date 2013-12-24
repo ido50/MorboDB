@@ -2,11 +2,11 @@ package MorboDB::Database;
 
 # ABSTRACT: A MorboDB database
 
-use Any::Moose;
+use Moo;
 use Carp;
 use MorboDB::Collection;
 
-our $VERSION = "0.001002";
+our $VERSION = "1.000000";
 $VERSION = eval $VERSION;
 
 =head1 NAME
@@ -35,11 +35,11 @@ The name of the database. String, required.
 
 =cut
 
-has 'name' => (is => 'ro', isa => 'Str', required => 1);
+has 'name' => (is => 'ro', required => 1);
 
-has '_top' => (is => 'ro', isa => 'MorboDB', required => 1, weak_ref => 1);
+has '_top' => (is => 'ro', required => 1, weak_ref => 1);
 
-has '_colls' => (is => 'ro', isa => 'HashRef[MorboDB::Collection]', default => sub { {} });
+has '_colls' => (is => 'ro', default => sub { {} });
 
 =head1 OBJECT METHODS
 
@@ -53,21 +53,18 @@ sub collection_names { sort keys %{$_[0]->_colls} }
 
 =head2 get_collection( $name )
 
-Returns a L<MorboDB::Collection> object with the given name. There are
-two ways to call this method:
+Returns a L<MorboDB::Collection> object with the given name:
 
 	my $db = $morbodb->get_database('users');
 	my $coll = $db->get_collection('users');
-	# or
-	my $coll = $db->users; # just like MongoDB
 
 Like MongoDB, you can create a child-collection (purely semantics really)
 by using dots, so 'users.admins' can be thought of as a child collection
-of users. There are two ways to get 'users.admins':
+of users:
 
 	my $admins = $db->get_collection('users.admins');
 	# or
-	my $admins = $db->users->admins; # just like MongoDB
+	my $admins = $db->get_collection('users')->get_collection('admins');
 
 =cut
 
@@ -129,16 +126,6 @@ Not implemented. Doesn't do anything here except returning false.
 
 sub eval { return } # not implemented
 
-sub AUTOLOAD {
-	my $self = shift;
-
-	our $AUTOLOAD;
-	my $coll = $AUTOLOAD;
-	$coll =~ s/.*:://;
-
-	return $self->get_collection($coll);
-}
-
 =head1 DIAGNOSTICS
 
 =over
@@ -168,7 +155,7 @@ Ido Perlmuter <ido@ido50.net>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2011, Ido Perlmuter C<< ido@ido50.net >>.
+Copyright (c) 2011-2013, Ido Perlmuter C<< ido@ido50.net >>.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself, either version

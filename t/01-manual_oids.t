@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use utf8;
 use MorboDB;
-use Test::More tests => 31;
+use Test::More tests => 28;
 use Try::Tiny;
 use Tie::IxHash;
 
@@ -132,16 +132,6 @@ is_deeply
    [qw/action drama fantasy vampires/],
    'saved document got its genre field updated';
 
-# let's see if autoload works okay
-my $coll2 = $db->autoloaded;
-is(ref $coll2, 'MorboDB::Collection', 'autoload on database returned a collection object');
-is($coll2->full_name, 'morbodb_test.autoloaded', 'autoloaded collection object seems okay');
-
-# let's see how child collections work
-my $coll3 = $coll2->subloaded;
-is(ref $coll3, 'MorboDB::Collection', 'autoload on collection returned a collection object');
-is($coll3->full_name, 'morbodb_test.autoloaded.subloaded', 'autoloaded child collection seems okay');
-
 # let's try to remove all Jason Segel starring shows
 my $rem1 = $coll->remove({ starring => 'Jason Segel' });
 is($rem1->{n}, 3, 'removed three documents as expected');
@@ -161,6 +151,10 @@ is($coll->count, 1, 'new document created');
 # and now drop the collection
 $coll->drop;
 is($coll->count, 0, 'dropped collection is empty (as it does not exist)');
+
+# let's check child collections
+my $child = $coll->get_collection('child');
+is($child->name, 'tv_shows.child', 'child collection okay');
 
 # let's drop the database
 
